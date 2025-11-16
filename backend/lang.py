@@ -34,9 +34,11 @@ class GraphState(TypedDict):
     summaries: Dict[str, str]
     insights: Dict[str, str]
     conclusion: str
-    visualizations: tuple
+ 
     pdf_path: str
     pdf_base64: str
+    language: str
+    pages: int
     
 
 # ==========================
@@ -59,8 +61,22 @@ def intro_agent(state: GraphState) -> Dict[str, Any]:
 
 def planner_agent(state: GraphState) -> Dict[str, Any]:
     topic = state["topic"]
+    pages = state.get("pages", 3)
+    
+    # Dynamic structure:
+    # Page 1: Introduction + Subtopic 1 (1 subtopic)
+    # Pages 2 to (pages-1): 2 subtopics per page (2 * (pages-2) subtopics)
+    # Last Page: Conclusion (0 subtopics)
+    # For pages=3: 1 + 2*1 + 0 = 3 subtopics
+    # For pages=5: 1 + 2*3 + 0 = 7 subtopics
+    # For pages=7: 1 + 2*5 + 0 = 11 subtopics
+    num_subtopics = 1 + (2 * (pages - 2))
+    
+    print(f"📊 Pages: {pages}")
+    print(f"📊 Subtopics needed: {num_subtopics} (Intro page: 1 subtopic + Middle pages: 2 per page + Conclusion page)")
+    
     prompt1 = f"Give a 2-3 word heading title for the topic '{topic}' If the topic is already of 1-4 words with correct english just give same title with corrected english if topic is large than 4 words summarize it to 4 words ."
-    prompt = f"Break the topic '{topic}' into 4-5 major subtopics. Return only bullet points."
+    prompt = f"Break the topic '{topic}' into {num_subtopics} major subtopics. Return only bullet points."
     response = groq_llm.invoke(prompt)
     response_heading = groq_llm.invoke(prompt1)
     
@@ -70,7 +86,7 @@ def planner_agent(state: GraphState) -> Dict[str, Any]:
     
     return {
         "heading": heading,
-        "subtopics": subtopics[:5] or [f"Overview of {topic}", "Key Aspects", "Future Outlook"]
+        "subtopics": subtopics[:num_subtopics] or [f"Overview of {topic}", "Key Aspects", "Future Outlook"]
     }
 
 def retriever_agent(state: GraphState) -> Dict[str, Any]:
@@ -109,20 +125,7 @@ def analyzer_agent(state: GraphState) -> Dict[str, Any]:
         insights[sub] = cleaned.strip()
     return {"insights": insights}
 
-def visualizer_agent(state: GraphState) -> Dict[str, Any]:
-    combined_text = " ".join(state["insights"].values())
-    combined_text = re.sub(r'[^\w\s]', '', combined_text.lower())
-    os.makedirs("temp_visuals", exist_ok=True)
-    timestamp = datetime.now().strftime("%H%M%S")
-    wc_file = f"temp_visuals/wordcloud_{timestamp}.png"
-    WordCloud(
-        width=800, height=400,
-        background_color=choice(["white", "lightgray", "beige"]),
-        max_words=np.random.randint(80, 150),
-        colormap=choice(["viridis", "plasma", "inferno", "magma", "cividis"])
-    ).generate(combined_text).to_file(wc_file)
-    return {"visualizations": (wc_file,)}
-                      
+           
 
 def clean_text(text: str) -> str:
     """Remove markdown and unwanted characters while keeping word spacing."""
@@ -155,19 +158,22 @@ def report_agent(state: dict) -> dict:
     styles = getSampleStyleSheet()
     styleN = styles["Normal"]
     title_style = styles["Title"]
+    title_bold_style = ParagraphStyle(
+        "TitleBold", parent=title_style, fontName="Helvetica-Bold"
+    )
     q_style = ParagraphStyle(
-        "Subtopic", parent=styles["Heading2"], fontSize=13, leading=16, spaceAfter=8
+        "Subtopic", parent=styles["Heading2"], fontSize=11, leading=13, spaceAfter=4
     )
     a_style = ParagraphStyle(
-        "Content", parent=styleN, fontSize=11, leading=14, spaceAfter=10
+        "Content", parent=styleN, fontSize=9, leading=11, spaceAfter=6
     )
 
     # --- Build Content ---
     content = []
 
     # Title
-    title_clean = re.sub(r'["“”*:-]+', "", state.get("heading", "")).strip()
-    content.append(Paragraph(title_clean, title_style))
+    title_clean = re.sub(r'["""*:-]+', "", state.get("heading", "")).strip()
+    content.append(Paragraph(f"<b>{title_clean}</b>", title_bold_style))
     content.append(Spacer(1, 12))
 
     # Introduction
@@ -178,10 +184,21 @@ def report_agent(state: dict) -> dict:
 
     # Subtopics, Summaries & Insights
     for i, sub in enumerate(state.get("summaries", {}), 1):
+        # Add page break after 1st subtopic, then after every 2 subtopics
+        # i=1: no break (page 1 with intro)
+        # i=2: break before (starts page 2)
+        # i=3: no break (page 2)
+        # i=4: break before (starts page 3)
+        # i=5: no break (page 3)
+        # i=6: break before (starts page 4)
+        # Pattern: break if i > 1 AND (i-1) is even
+        if i > 1 and (i - 1) % 2 == 1:
+            content.append(PageBreak())
+        
         # 🧹 Clean subtopic name
-        sub_clean = re.sub(r'["“”*•\-]+', '', sub).strip()
+        sub_clean = re.sub(r'["""*•\-]+', '', sub).strip()
         if sub_clean:
-            heading_text = f"{i}. {sub_clean}:"
+            heading_text = f"<b>{i}. {sub_clean}:</b>"
             content.append(Paragraph(heading_text, q_style))
 
         # 🧹 Clean summary
@@ -203,7 +220,7 @@ def report_agent(state: dict) -> dict:
                 for line in cleaned_lines:
                     content.append(Paragraph(line, a_style))
 
-        content.append(Spacer(1, 10))
+        content.append(Spacer(1, 4))
 
     # --- Conclusion ---
     content.append(PageBreak())
@@ -257,7 +274,7 @@ graph.add_node("planner", planner_agent)
 graph.add_node("retriever", retriever_agent)
 graph.add_node("summarizer", summarizer_agent)
 graph.add_node("analyzer", analyzer_agent)
-graph.add_node("visualizer", visualizer_agent)
+
 graph.add_node("report_generator", report_agent)
 graph.add_node("conclusion", conclusion_agent)
 
@@ -267,8 +284,7 @@ graph.add_edge("planner", "retriever")
 graph.add_edge("retriever", "summarizer")
 graph.add_edge("summarizer", "analyzer")
 graph.add_edge("analyzer", "conclusion")
-graph.add_edge("conclusion", "visualizer")
-graph.add_edge("visualizer", "report_generator")
+graph.add_edge("conclusion","report_generator")
 graph.add_edge("report_generator", END)
 
 app = graph.compile()

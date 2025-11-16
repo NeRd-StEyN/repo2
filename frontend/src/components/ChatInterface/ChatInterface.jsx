@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import "./ChatInterface.css";
 import ReactMarkdown from "react-markdown";
-const ChatInterface = ({ pdfUrl, topic }) => {
+const ChatInterface = ({ pdfUrl, topic,language }) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -45,12 +45,14 @@ const ChatInterface = ({ pdfUrl, topic }) => {
         ? pdfUrl.split(",")[1]
         : pdfUrl;
 
-      const response = await fetch("/chat/init", {
+      const response = await fetch("http://localhost:5000/chat/init", {
         method: "POST",
+
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_id: sessionId,
           pdf_base64: base64Data,
+          language: language,  // 🆕 pass language to backend
         }),
       });
 
@@ -91,12 +93,13 @@ const ChatInterface = ({ pdfUrl, topic }) => {
     setMessages((prev) => [...prev, { type: "user", content: userMessage }]);
 
     try {
-      const response = await fetch("/chat/message", {
+      const response = await fetch("http://localhost:5000/chat/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_id: sessionId,
           message: userMessage,
+          language: language,  // 🆕 pass language to backend
         }),
       });
 

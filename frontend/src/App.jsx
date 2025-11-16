@@ -15,6 +15,8 @@ function App() {
     draftingReport: false,
     finalizing: false
   });
+    const [language, setLanguage] = useState("English");
+
 
   return (
     <div className="app">
@@ -28,6 +30,9 @@ function App() {
             setIsGenerating={setIsGenerating}
             progress={progress}
             setProgress={setProgress}
+             language={language}          // 🆕 pass current language
+        setLanguage={setLanguage}    // 🆕 allow ReportGenerator to change it
+
           />
         </div>
         <div className="right-panel">
@@ -40,6 +45,7 @@ function App() {
   key={activeTopic + (isGenerating ? "-gen" : "")} 
   topic={activeTopic}
   pdfUrl={pdfData}
+  language={language}   
 />
 
         </div>

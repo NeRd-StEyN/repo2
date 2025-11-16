@@ -9,6 +9,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain.embeddings.base import Embeddings
 from langchain_groq import ChatGroq
+from deep_translator import GoogleTranslator
 
 # -------------------------------------------------------------------
 # 🔹 Load environment variables
@@ -127,6 +128,50 @@ class LocalEmbeddings(Embeddings):
 chat_sessions = {}  # { session_id: {"vectorstore_path": str, "chat_history": list} }
 
 # -------------------------------------------------------------------
+# 🔹 Translation Functions
+# -------------------------------------------------------------------
+def get_language_code(language: str) -> str:
+    """Convert language name to language code for translator."""
+    language_codes = {
+        # Indian Languages
+        "English": "en",
+        "Hindi": "hi",
+        "Tamil": "ta",
+        "Telugu": "te",
+        "Kannada": "kn",
+        "Malayalam": "ml",
+        "Marathi": "mr",
+        "Bengali": "bn",
+        "Gujarati": "gu",
+        "Punjabi": "pa",
+        # International Languages
+        "Spanish": "es",
+        "French": "fr",
+        "German": "de",
+        "Portuguese": "pt",
+        "Italian": "it",
+        "Chinese (Simplified)": "zh-CN",
+        "Japanese": "ja",
+        "Korean": "ko"
+    }
+    return language_codes.get(language, "en")
+
+def translate_text(text: str, target_language: str) -> str:
+    """Translate text from English to target language using deep-translator."""
+    if not text or target_language == "English":
+        return text
+    
+    try:
+        lang_code = get_language_code(target_language)
+        translator = GoogleTranslator(source='en', target=lang_code)
+        translated = translator.translate(text)
+        print(f"✅ Chat translated to {target_language}: {text[:50]}...")
+        return translated
+    except Exception as e:
+        print(f"⚠️ Chat translation error for {target_language}: {e}")
+        return text  # Return original text if translation fails
+
+# -------------------------------------------------------------------
 # 🔹 Initialize Chat Session
 # -------------------------------------------------------------------
 def init_chat_from_base64(session_id: str, pdf_base64: str):
@@ -192,8 +237,8 @@ def init_chat_from_base64(session_id: str, pdf_base64: str):
 # -------------------------------------------------------------------
 # 🔹 Chat With PDF
 # -------------------------------------------------------------------
-def chat_with_pdf(session_id: str, message: str):
-    """Chat with initialized PDF session (Render-safe)."""
+def chat_with_pdf(session_id: str, message: str, language: str = "English"):
+    """Chat with initialized PDF session (Render-safe) with translation support."""
     try:
         if session_id not in chat_sessions:
             return {"error": f"No chat session found for '{session_id}'."}
@@ -236,10 +281,13 @@ Answer briefly using bullet points or short paragraphs.
         response = llm.invoke(prompt)
         answer = getattr(response, "content", "").strip() or "⚠️ No response from AI."
 
-        chat_history.append((message, answer))
+        # ✅ Translate answer to selected language
+        answer_translated = translate_text(answer, language)
 
-        print(f"[Chat] {session_id} | Q: {message} | A: {answer[:100]}...")
-        return {"response": answer}
+        chat_history.append((message, answer_translated))
+
+        print(f"[Chat] {session_id} | Lang: {language} | Q: {message} | A: {answer_translated[:100]}...")
+        return {"response": answer_translated}
 
     except Exception as e:
         print(f"❌ Error in chat_with_pdf: {e}")
