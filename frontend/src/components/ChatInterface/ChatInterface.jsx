@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import "./ChatInterface.css";
 import ReactMarkdown from "react-markdown";
-const ChatInterface = ({ pdfUrl, topic,language }) => {
+const ChatInterface = ({ pdfUrl, topic }) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +37,15 @@ const ChatInterface = ({ pdfUrl, topic,language }) => {
   }, [pdfUrl]);
 
   // -----------------------------------------------
+  // Detect RTL text to set proper direction per message
+  // -----------------------------------------------
+  const getTextDirection = (text = "") => {
+    // Arabic, Hebrew and adjacent blocks
+    const rtlPattern = /[\u0590-\u08FF]/;
+    return rtlPattern.test(text) ? "rtl" : "ltr";
+  };
+
+  // -----------------------------------------------
   // Initialize chat session
   // -----------------------------------------------
   const initializeChat = async (sessionId) => {
@@ -52,7 +61,6 @@ const ChatInterface = ({ pdfUrl, topic,language }) => {
         body: JSON.stringify({
           session_id: sessionId,
           pdf_base64: base64Data,
-          language: language,  // 🆕 pass language to backend
         }),
       });
 
@@ -99,7 +107,6 @@ const ChatInterface = ({ pdfUrl, topic,language }) => {
         body: JSON.stringify({
           session_id: sessionId,
           message: userMessage,
-          language: language,  // 🆕 pass language to backend
         }),
       });
 
@@ -138,13 +145,16 @@ const ChatInterface = ({ pdfUrl, topic,language }) => {
   return (
     <div className="chat-interface">
       <div className="chat-messages">
-        {messages.map((message, index) => (
-          <div key={index} className={`message ${message.type}`}>
-          <div className="message-content">
-  <ReactMarkdown>{message.content}</ReactMarkdown>
-</div>
-          </div>
-        ))}
+        {messages.map((message, index) => {
+          const dir = getTextDirection(message.content);
+          return (
+            <div key={index} className={`message ${message.type}`}>
+              <div className="message-content" dir={dir}>
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              </div>
+            </div>
+          );
+        })}
 
         {isLoading && (
           <div className="message system">

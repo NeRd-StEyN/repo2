@@ -17,6 +17,7 @@ CORS(server)
 # -------------------------------------------------------------------
 progress_state = {}
 generated_reports = {}
+generated_english_reports = {}  # Store English version for RAG
 generation_status = {}
 
 # -------------------------------------------------------------------
@@ -41,8 +42,17 @@ def background_generate(cache_key, topic, language="English", pages=3):
             # ✅ Capture Base64 PDF
             if "report_generator" in state:
                 pdf_base64 = state["report_generator"].get("pdf_base64")
+                english_pdf_base64 = state["report_generator"].get("english_pdf_base64")
+                
                 if pdf_base64:
                     generated_reports[cache_key] = pdf_base64
+                    # Store English PDF mapped to the TOPIC (session_id)
+                    if english_pdf_base64:
+                        print(f"✅ Storing English PDF for topic: '{topic}'")
+                        generated_english_reports[topic] = english_pdf_base64
+                    else:
+                        print(f"⚠️ No English PDF returned for topic: '{topic}'")
+                    
                     generation_status[cache_key] = "completed"
                 break
 
@@ -92,13 +102,7 @@ def generate_report():
         return jsonify({"error": "Page count must be between 2 and 10"}), 400
 
     # Optional: validate language (optional safety)
-    allowed_languages = [
-        "English",
-        # Indian Languages
-        "Hindi", "Tamil", "Telugu", "Kannada", "Malayalam", "Marathi", "Bengali", "Gujarati", "Punjabi",
-        # International Languages
-        "Spanish", "French", "German", "Portuguese", "Italian", "Chinese (Simplified)", "Japanese", "Korean"
-    ]
+    allowed_languages = ["English", "Hindi", "Tamil", "Telugu", "Bengali", "Marathi", "Spanish", "French", "German", "Italian"]
     if language not in allowed_languages:
         return jsonify({"error": f"Unsupported language: {language}"}), 400
 
@@ -173,13 +177,22 @@ def chat_init():
         data = request.get_json()
         session_id = data.get("session_id")
         pdf_base64 = data.get("pdf_base64")
-        language = data.get("language", "English")  # 🆕 Add language
 
         if not session_id or not pdf_base64:
             return jsonify({"error": "Missing session_id or pdf_base64"}), 400
 
+        # 🆕 Check if we have an English version for this topic (session_id)
+        # The session_id from frontend is typically the topic name
+        # If we have an English version, use THAT for the RAG context instead of the user's PDF
+        if session_id in generated_english_reports:
+            print(f"✅ Using server-side ENGLISH PDF for RAG context for topic: {session_id}")
+            pdf_base64 = generated_english_reports[session_id]
+        else:
+            print(f"⚠️ No English PDF found for {session_id}, using provided PDF.")
+            print(f"Available English Reports: {list(generated_english_reports.keys())}")
+
         # Pass language into chat init
-        result = init_chat_from_base64(session_id, pdf_base64, language)
+        result = init_chat_from_base64(session_id, pdf_base64)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -192,12 +205,11 @@ def chat_message():
         data = request.get_json()
         session_id = data.get("session_id")
         message = data.get("message")
-        language = data.get("language", "English")  # 🆕 Add language
 
         if not session_id or not message:
             return jsonify({"error": "Missing session_id or message"}), 400
 
-        result = chat_with_pdf(session_id, message, language)
+        result = chat_with_pdf(session_id, message)
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

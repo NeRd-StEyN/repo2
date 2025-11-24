@@ -15,6 +15,10 @@ pypdf
 wikipedia
 faiss-cpu
 groq
-langchain-huggingface
+sentence-transformers
 deep_translator
-
+duckduckgo-search
+ddgs
+arabic-reshaper
+python-bidi
+requests

@@ -1,47 +1,56 @@
 /* components/Header/Header.css */
 .header {
-background: linear-gradient(145deg,#ffffff , #000000 );
-  color: rgb(0, 0, 0);
-  padding: 2rem 0;
-height:3rem;
+  background: #111111;
+  color: #ffffff;
+  padding: 1rem 0;
+  height: auto;
   text-align: left;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-border-radius: 25px;
-margin:0 10px;
-position: relative;
-top:10px;
-margin-bottom:10px;
-
-
-}
-@media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    height: auto;
-    padding: 1rem;
-    text-align: center;
-    position: relative;
-    left:28px;
-  }
-}
-.header-content {
-
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border-radius: 16px;
+  margin: 10px;
+  position: relative;
+  border: 1px solid #333;
   display: flex;
-    padding-left:3%;
+  align-items: center;
+}
+
+.header-content {
+  display: flex;
+  padding: 0 2rem;
   align-items: center;
   gap: 1.5rem;
+  width: 100%;
 }
 
-
 .header h1 {
-  margin: 0 0 0.5rem 0;
-  font-size: 2.5rem;
+  margin: 0;
+  font-size: 2rem;
   font-weight: 700;
+  background: linear-gradient(135deg, #fff, #aaa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -1px;
 }
 
 .header p {
   margin: 0;
   font-size: 1.1rem;
-  opacity: 0.9;
-  color:black;
+  opacity: 0.8;
+  color: #ccc;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    padding: 1rem;
+    text-align: center;
+    height: auto;
+  }
+
+  .header-content {
+    flex-direction: column;
+    padding: 0;
+    gap: 1rem;
+  }
 }

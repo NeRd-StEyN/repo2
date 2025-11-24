@@ -146,17 +146,26 @@ const ReportGenerator = ({
             className="language-select"
           >
             <option>English</option>
-            <option>Hindi</option>
-            <option>Spanish</option>
-            <option>French</option>
-            <option>German</option>
+            <optgroup label="Indian Languages">
+              <option>Hindi</option>
+              <option>Tamil</option>
+              <option>Telugu</option>
+              <option>Bengali</option>
+              <option>Marathi</option>
+            </optgroup>
+            <optgroup label="Foreign Languages">
+              <option>Spanish</option>
+              <option>French</option>
+              <option>German</option>
+              <option>Italian</option>
+            </optgroup>
           </select>
         </div>
 
         {/* Page Count Selector */}
         <div className="input-group">
           <label className="input-label">
-            Number of Pages (2–10):
+            Number of SubTopics (2–10):
           </label>
           <input
             type="number"

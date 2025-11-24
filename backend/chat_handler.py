@@ -1,175 +1,36 @@
 import os
 import base64
 import tempfile
-import requests
 import gc
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain.embeddings.base import Embeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 from deep_translator import GoogleTranslator
 
 # -------------------------------------------------------------------
-# 🔹 Load environment variables
+# Load environment variables
 # -------------------------------------------------------------------
 load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
-hf_api_token = os.getenv("HF_API_TOKEN")
 
 if not groq_api_key:
-    print("⚠️ Warning: GROQ_API_KEY not found in environment variables!")
-if not hf_api_token:
-    print("⚠️ Warning: HF_API_TOKEN not found in environment variables!")
+    print("Warning: GROQ_API_KEY not found in environment variables!")
 
 # -------------------------------------------------------------------
-# 🔹 Fixed Hugging Face API embedding class with correct router endpoint
+# HuggingFace Embeddings (Multilingual Support)
 # -------------------------------------------------------------------
-class HuggingFaceAPIEmbeddings(Embeddings):
-    """Use Hugging Face Inference API via router.huggingface.co with correct implementation"""
-
-    def __init__(
-        self,
-        api_token: str,
-        model_id: str = "sentence-transformers/all-MiniLM-L6-v2",
-    ):
-        self.api_token = api_token
-        self.model_id = model_id
-        # ✅ CORRECT: Use router endpoint but with proper implementation
-        self.api_url = f"https://router.huggingface.co/hf-inference/{self.model_id}"
-        self.headers = {
-            "Authorization": f"Bearer {self.api_token}",
-            "Content-Type": "application/json",
-        }
-
-    def embed_query(self, text: str):
-        """Embed a single text input."""
-        return self.embed_documents([text])[0]
-
-    def embed_documents(self, texts: list):
-        """Embed multiple documents efficiently."""
-        try:
-            # ✅ Process texts in batches to avoid timeout
-            embeddings = []
-            for text in texts:
-                payload = {"inputs": text}
-                
-                response = requests.post(
-                    self.api_url, 
-                    headers=self.headers, 
-                    json=payload, 
-                    timeout=60
-                )
-
-                if response.status_code != 200:
-                    error_msg = f"HF API Error {response.status_code}"
-                    if response.text:
-                        error_msg += f": {response.text[:200]}"
-                    print(f"❌ {error_msg}")
-                    
-                    if response.status_code == 404:
-                        raise ValueError(f"Model '{self.model_id}' not found or not supported for embeddings.")
-                    elif response.status_code == 503:
-                        raise ValueError(f"Model '{self.model_id}' is loading. Please try again later.")
-                    else:
-                        raise ValueError(error_msg)
-
-                # ✅ Process the response
-                result = response.json()
-                
-                # Handle different response formats
-                if isinstance(result, list):
-                    if isinstance(result[0], list):
-                        # Nested list format
-                        embeddings.extend(result[0])
-                    else:
-                        # Flat list format
-                        embeddings.append(result)
-                elif isinstance(result, dict):
-                    if "embeddings" in result:
-                        embeddings.append(result["embeddings"])
-                    else:
-                        raise ValueError(f"Unexpected response format: {result}")
-                else:
-                    raise ValueError(f"Unexpected response type: {type(result)}")
-
-            return embeddings
-
-        except requests.exceptions.Timeout:
-            raise ValueError("HuggingFace API request timed out")
-        except Exception as e:
-            print(f"❌ Error in HF API call: {e}")
-            raise
-
-# ✅ Initialize the embedding model once
-embedding_model = HuggingFaceAPIEmbeddings(api_token=hf_api_token)
-
-# -------------------------------------------------------------------
-# 🔹 Alternative: Use free local embeddings as fallback
-# -------------------------------------------------------------------
-class LocalEmbeddings(Embeddings):
-    """Fallback embedding model using all-MiniLM-L6-v2 dimensions"""
-    
-    def __init__(self, dimensions=384):
-        self.dimensions = dimensions
-        
-    def embed_query(self, text: str):
-        """Return dummy embeddings - in production, use a proper local model"""
-        return [0.0] * self.dimensions
-        
-    def embed_documents(self, texts: list):
-        """Return dummy embeddings for multiple documents"""
-        return [[0.0] * self.dimensions for _ in texts]
+embedding_model = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+)
+print("Loaded HuggingFace Embeddings: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 # -------------------------------------------------------------------
 # 🔹 In-memory chat sessions
 # -------------------------------------------------------------------
 chat_sessions = {}  # { session_id: {"vectorstore_path": str, "chat_history": list} }
-
-# -------------------------------------------------------------------
-# 🔹 Translation Functions
-# -------------------------------------------------------------------
-def get_language_code(language: str) -> str:
-    """Convert language name to language code for translator."""
-    language_codes = {
-        # Indian Languages
-        "English": "en",
-        "Hindi": "hi",
-        "Tamil": "ta",
-        "Telugu": "te",
-        "Kannada": "kn",
-        "Malayalam": "ml",
-        "Marathi": "mr",
-        "Bengali": "bn",
-        "Gujarati": "gu",
-        "Punjabi": "pa",
-        # International Languages
-        "Spanish": "es",
-        "French": "fr",
-        "German": "de",
-        "Portuguese": "pt",
-        "Italian": "it",
-        "Chinese (Simplified)": "zh-CN",
-        "Japanese": "ja",
-        "Korean": "ko"
-    }
-    return language_codes.get(language, "en")
-
-def translate_text(text: str, target_language: str) -> str:
-    """Translate text from English to target language using deep-translator."""
-    if not text or target_language == "English":
-        return text
-    
-    try:
-        lang_code = get_language_code(target_language)
-        translator = GoogleTranslator(source='en', target=lang_code)
-        translated = translator.translate(text)
-        print(f"✅ Chat translated to {target_language}: {text[:50]}...")
-        return translated
-    except Exception as e:
-        print(f"⚠️ Chat translation error for {target_language}: {e}")
-        return text  # Return original text if translation fails
 
 # -------------------------------------------------------------------
 # 🔹 Initialize Chat Session
@@ -178,13 +39,13 @@ def init_chat_from_base64(session_id: str, pdf_base64: str):
     """Initialize chat session using Base64 PDF (Render memory safe)."""
     temp_file_path = None
     try:
-        # ✅ Decode PDF safely
+        # Decode PDF
         pdf_bytes = base64.b64decode(pdf_base64)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             tmp.write(pdf_bytes)
             temp_file_path = tmp.name
 
-        # ✅ Load and split PDF
+        # Load PDF
         loader = PyPDFLoader(temp_file_path)
         docs = loader.load()
         
@@ -197,27 +58,21 @@ def init_chat_from_base64(session_id: str, pdf_base64: str):
         if not chunks:
             raise ValueError("No readable text found in the uploaded PDF.")
 
-        # ✅ Try Hugging Face embeddings first, fallback to local if it fails
-        try:
-            # Test the embedding model
-            test_embedding = embedding_model.embed_query("test")
-            print(f"✅ Using Hugging Face embeddings with dimension: {len(test_embedding)}")
-            current_embedding_model = embedding_model
-        except Exception as e:
-            print(f"⚠️ Hugging Face embeddings failed, using local fallback: {e}")
-            current_embedding_model = LocalEmbeddings()
+        # Test embeddings
+        test_embedding = embedding_model.embed_query("test")
+        print(f"Embedding dimension = {len(test_embedding)}")
 
-        # ✅ Build FAISS index in /tmp
+        # Build FAISS Index
         temp_path = f"/tmp/vectorstore_{session_id}"
-        vectorstore = FAISS.from_documents(chunks, current_embedding_model)
+        vectorstore = FAISS.from_documents(chunks, embedding_model)
         vectorstore.save_local(temp_path)
 
-        # ✅ Initialize chat session
+        # Save session
         chat_sessions[session_id] = {
-            "vectorstore_path": temp_path, 
-            "chat_history": []
+            "vectorstore_path": temp_path,
+            "chat_history": [],
         }
-        
+
         print(f"✅ Chat session '{session_id}' initialized successfully.")
         return {"message": f"Chat session '{session_id}' initialized successfully."}
 
@@ -225,7 +80,6 @@ def init_chat_from_base64(session_id: str, pdf_base64: str):
         print(f"❌ Error initializing chat: {e}")
         return {"error": str(e)}
     finally:
-        # ✅ Cleanup temporary files and memory
         if temp_file_path and os.path.exists(temp_file_path):
             try:
                 os.unlink(temp_file_path)
@@ -237,8 +91,8 @@ def init_chat_from_base64(session_id: str, pdf_base64: str):
 # -------------------------------------------------------------------
 # 🔹 Chat With PDF
 # -------------------------------------------------------------------
-def chat_with_pdf(session_id: str, message: str, language: str = "English"):
-    """Chat with initialized PDF session (Render-safe) with translation support."""
+def chat_with_pdf(session_id: str, message: str):
+    """Chat with initialized PDF session (Render-safe)."""
     try:
         if session_id not in chat_sessions:
             return {"error": f"No chat session found for '{session_id}'."}
@@ -247,51 +101,88 @@ def chat_with_pdf(session_id: str, message: str, language: str = "English"):
         temp_path = session["vectorstore_path"]
         chat_history = session["chat_history"]
 
-        # ✅ Use local embeddings for retrieval to avoid API issues
-        local_embedding_model = LocalEmbeddings()
-        
-        # ✅ Reload FAISS index with local embeddings
+        # -------------------------------------------------------------------
+        # ⭐ NEW: Convert Hinglish/any language → English BEFORE processing
+        # -------------------------------------------------------------------
+        try:
+            user_message_en = GoogleTranslator(source="auto", target="en").translate(message)
+        except:
+            user_message_en = message  # fallback
+
+        # Reload FAISS index
         vectorstore = FAISS.load_local(
-            temp_path, local_embedding_model, allow_dangerous_deserialization=True
+            temp_path, embedding_model, allow_dangerous_deserialization=True
         )
-        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-        docs = retriever.invoke(message)
-        context = "\n\n".join([d.page_content for d in docs]) if docs else "No context found."
 
-        # ✅ Build concise prompt
-        past_convo = "\n".join([f"User: {u}\nAssistant: {a}" for u, a in chat_history[-3:]])
-        prompt = f"""
-You are a concise, factual assistant.
-Use only the PDF context below to answer clearly and accurately.
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
+        
+        # Use translated user message for retrieval
+        docs = retriever.invoke(user_message_en)
 
-Context:
+        # Translate context to English to ensure LLM speaks English
+        translated_docs = []
+        translator = GoogleTranslator(source='auto', target='en')
+        
+        for d in docs:
+            try:
+                trans_text = translator.translate(d.page_content)
+                translated_docs.append(trans_text)
+            except Exception as e:
+                print(f"Translation failed for chunk: {e}")
+                translated_docs.append(d.page_content)
+
+        context = "\n\n".join(translated_docs) if translated_docs else "No context found."
+
+        # Build conversation history
+        history_context = ""
+        if chat_history:
+            past_exchanges = chat_history[-5:]
+            history_context = "\n".join([
+                f"User: {u}\nAssistant: {a[:150]}" 
+                for u, a in past_exchanges
+            ])
+            history_context = f"\nPrevious conversation:\n{history_context}\n"
+        
+        prompt = f"""You are an AI assistant that ONLY speaks English.
+The user has provided a document (context) which may be in a different language.
+Your task is to answer the user's question based on the context, but you must TRANSLATE your answer into ENGLISH.
+
+### STRICT RULES:
+1. **ENGLISH ONLY**: Your response must be 100% in English. 
+2. **TRANSLATE**: If the answer is found in non-English context, translate to English.
+3. **ACCURACY**: Use only the context. If not found, say:
+   "Sorry, I cannot answer this question based on the provided context."
+
+### Context:
 {context}
 
-Previous Chat:
-{past_convo}
+### Conversation History:
+{history_context}
 
-User Question:
-{message}
+### User Question (normalized to English):
+{user_message_en}
 
-Answer briefly using bullet points or short paragraphs.
-"""
+### Answer (in English):"""
 
-        # ✅ Use Groq model
-        llm = ChatGroq(api_key=groq_api_key, model="llama-3.1-8b-instant", temperature=0.2)
+        llm = ChatGroq(
+            api_key=groq_api_key,
+            model="llama-3.1-8b-instant",
+            temperature=0.3,
+            max_tokens=400,
+            model_kwargs={"top_p": 0.9}
+        )
+
         response = llm.invoke(prompt)
-        answer = getattr(response, "content", "").strip() or "⚠️ No response from AI."
+        answer = getattr(response, "content", "").strip() or "No relevant information found."
 
-        # ✅ Translate answer to selected language
-        answer_translated = translate_text(answer, language)
+        # Save memory
+        chat_history.append((message, answer))
 
-        chat_history.append((message, answer_translated))
-
-        print(f"[Chat] {session_id} | Lang: {language} | Q: {message} | A: {answer_translated[:100]}...")
-        return {"response": answer_translated}
+        print(f"[Chat] {session_id} | Q: {message} | A: {answer[:120]}...")
+        return {"response": answer}
 
     except Exception as e:
         print(f"❌ Error in chat_with_pdf: {e}")
         return {"error": str(e)}
     finally:
-        # ✅ Cleanup memory
         gc.collect()

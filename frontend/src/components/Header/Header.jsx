@@ -7,14 +7,14 @@ const Header = () => {
   return (
     <header className="header">
       <div className="header-content">
-         <div> {/* Icon scales with font size */}
-      <FaRobot  size={60} color="#000000" />
-    </div>
- 
+        <div> {/* Icon scales with font size */}
+          <FaRobot size={60} color="#ffffff" />
+        </div>
+
         <h1>RepoVerse</h1>
-   
+
       </div>
-      
+
     </header>
   );
 };

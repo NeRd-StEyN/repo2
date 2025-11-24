@@ -39,7 +39,7 @@ const ProgressTracker = ({ topic, progress = {}, isGenerating = false }) => {
     { key: "topicAnalysis", label: "Topic Analysis", description: "Analyzing the topic and planning structure" },
     { key: "dataGathering", label: "Data Gathering", description: "Researching and collecting information" },
     { key: "draftingReport", label: "Drafting Report", description: "Writing summaries and insights" },
-    { key: "finalizing", label: "Finalizing", description: "Creating visualizations and PDF" },
+    { key: "finalizing", label: "Finalizing", description: "Creating PDF" },
   ];
 
   const currentStageIndex = stages.findIndex((s) => !progress[s.key]);
@@ -78,13 +78,6 @@ const ProgressTracker = ({ topic, progress = {}, isGenerating = false }) => {
                 >
                   {isCompleted ? "✓" : isCurrent ? "⟳" : index + 1}
                 </div>
-                {index < stages.length - 1 && (
-                  <div
-                    className={`connection-line ${
-                      isCompleted ? "completed" : ""
-                    }`}
-                  ></div>
-                )}
               </div>
 
               <div className="stage-info">

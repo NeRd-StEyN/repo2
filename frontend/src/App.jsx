@@ -15,7 +15,7 @@ function App() {
     draftingReport: false,
     finalizing: false
   });
-    const [language, setLanguage] = useState("English");
+  const [language, setLanguage] = useState("English");
 
 
   return (
@@ -23,31 +23,28 @@ function App() {
       <Header />
       <div className="app-container">
         <div className="left-panel">
-          <ReportGenerator 
+          <ReportGenerator
             setTopic={setActiveTopic}
             setPdfUrl={setPdfData}
             isGenerating={isGenerating}
             setIsGenerating={setIsGenerating}
             progress={progress}
             setProgress={setProgress}
-             language={language}          // 🆕 pass current language
-        setLanguage={setLanguage}    // 🆕 allow ReportGenerator to change it
-
+            language={language}
+            setLanguage={setLanguage}
           />
         </div>
         <div className="right-panel">
-          <ReportDisplay 
+          <ReportDisplay
             topic={activeTopic}
             pdfUrl={pdfData}
             isGenerating={isGenerating}
           />
-          <ChatInterface 
-  key={activeTopic + (isGenerating ? "-gen" : "")} 
-  topic={activeTopic}
-  pdfUrl={pdfData}
-  language={language}   
-/>
-
+          <ChatInterface
+            key={activeTopic + (isGenerating ? "-gen" : "")}
+            topic={activeTopic}
+            pdfUrl={pdfData}
+          />
         </div>
       </div>
     </div>
