@@ -63,16 +63,24 @@ export const ReportDisplay = ({
 
 
   const openPdfInNewTab = () => {
-    if (pdfBlobUrl) {
-      // Use a more reliable way to open the PDF in a new tab
-      // Some browsers block dynamic tab manipulation, so we'll use a simple window.open
-      // but try to set the title via a temporary HTML blob if possible, or just open directly
-      const win = window.open(pdfBlobUrl, "_blank");
-      if (win) {
-        win.focus();
-      } else {
-        alert("Please allow popups to view the PDF in a new tab.");
-      }
+    let viewUrl = "";
+    if (topic && language && pageCount) {
+      const cacheKey = encodeURIComponent(`${topic}||${language}||${pageCount}`);
+      viewUrl = `/api/report/view/${cacheKey}`;
+    } else if (pdfBlobUrl) {
+      viewUrl = pdfBlobUrl;
+    }
+
+    if (viewUrl) {
+      const link = document.createElement("a");
+      link.href = viewUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      alert("PDF not ready for viewing yet.");
     }
   };
 

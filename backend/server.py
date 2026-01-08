@@ -1,5 +1,6 @@
 import os
 import threading
+import base64
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
 from lang import app, rewrite_text, safe_print
@@ -158,6 +159,30 @@ def get_report(cache_key):
         "report_text": generated_report_texts.get(cache_key, ""),
         "status": "success"
     })
+
+
+@server.route("/api/report/view/<cache_key>", methods=["GET"])
+def view_report_pdf(cache_key):
+    """Serve the generated PDF directly for browser viewing."""
+    if cache_key not in generated_reports:
+        return "Report not found", 404
+
+    try:
+        pdf_base64 = generated_reports[cache_key]
+        pdf_bytes = base64.b64decode(pdf_base64)
+        
+        filename = cache_key.split("||")[0] if "||" in cache_key else "report"
+        
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={
+                "Content-Type": "application/pdf",
+                "Content-Disposition": f"inline; filename=\"{filename}.pdf\""
+            }
+        )
+    except Exception as e:
+        return str(e), 500
 
 
 @server.route("/api/report/update", methods=["POST"])
