@@ -1,0 +1,19 @@
+# Frontend
+frontend/node_modules
+frontend/dist
+
+# Backend
+backend/__pycache__
+backend/.env
+backend/*.pyc
+backend/reports
+backend/fonts/
+
+# General
+.git
+.gitignore
+.vscode
+.antigravity
+.gemini
+Dockerfile
+.dockerignore

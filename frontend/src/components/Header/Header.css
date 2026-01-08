@@ -1,0 +1,56 @@
+ 
+.header {
+  background: #111111;
+  color: #ffffff;
+  padding: 1rem 0;
+  height: auto;
+  text-align: left;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border-radius: 16px;
+  margin: 10px;
+  position: relative;
+  border: 1px solid #333;
+  display: flex;
+  align-items: center;
+}
+
+.header-content {
+  display: flex;
+  padding: 0 2rem;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff, #aaa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -1px;
+}
+
+.header p {
+  margin: 0;
+  font-size: 1.1rem;
+  opacity: 0.8;
+  color: #ccc;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    padding: 1rem;
+    text-align: center;
+    height: auto;
+  }
+
+  .header-content {
+    flex-direction: column;
+    padding: 0;
+    gap: 1rem;
+  }
+}
