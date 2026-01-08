@@ -78,6 +78,32 @@
     border-color: #007bff;
 }
 
+.header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.open-tab-btn {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ccc;
+    border: 1px solid #444;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.open-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: #666;
+}
+
 .report-content {
     flex: 1;
     padding: 0;
@@ -102,6 +128,53 @@
     min-height: 100%;
     background: #fff;
     border: none;
+}
+
+.markdown-viewer-container {
+    flex: 1;
+    overflow-y: auto;
+    background: #111;
+    padding: 2rem;
+    min-height: 0;
+    scroll-behavior: smooth;
+}
+
+.markdown-content {
+    max-width: 800px;
+    margin: 0 auto;
+    color: #e0e0e0;
+    line-height: 1.8;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 1.05rem;
+    font-weight: 400;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+    color: #ffffff;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.markdown-content p {
+    margin-bottom: 1.5rem;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+}
+
+.markdown-content li {
+    margin-bottom: 0.5rem;
+}
+
+.markdown-content strong {
+    color: #fff;
+    font-weight: 600;
 }
 
 .report-editor-container {
@@ -247,8 +320,22 @@
 .pdf-actions {
     text-align: center;
     padding: 1rem;
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.4);
     border-top: 1px solid #333;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.download-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    border: 1px solid #444;
+}
+
+.download-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #666;
 }
 
 .download-btn,

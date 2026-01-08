@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import "./ReportDisplay.css";
-import PdfViewer from "./PdfViewer";
+import ReactMarkdown from 'react-markdown';
+import { FiExternalLink, FiDownload, FiEdit3, FiEye } from 'react-icons/fi';
 
 export const ReportDisplay = ({
   topic,
@@ -216,13 +217,22 @@ export const ReportDisplay = ({
       <div className="report-header">
         <h3>Preview Report</h3>
         {!isGenerating && pdfUrl && (
-          <button
-            className={`edit-toggle-btn ${isEditing ? 'active' : ''}`}
-            onClick={() => setIsEditing(!isEditing)}
-            disabled={isSaving}
-          >
-            {isEditing ? "👁️ View PDF" : "✏️ Edit Text"}
-          </button>
+          <div className="header-actions">
+            <button
+              className="open-tab-btn"
+              onClick={openPdfInNewTab}
+              title="Open PDF in new tab"
+            >
+              <FiExternalLink /> Full PDF
+            </button>
+            <button
+              className={`edit-toggle-btn ${isEditing ? 'active' : ''}`}
+              onClick={() => setIsEditing(!isEditing)}
+              disabled={isSaving}
+            >
+              {isEditing ? <><FiEye /> View</> : <><FiEdit3 /> Edit</>}
+            </button>
+          </div>
         )}
       </div>
 
@@ -280,22 +290,26 @@ export const ReportDisplay = ({
                 </div>
               </div>
             ) : (
-              <div className="pdf-viewer-wrapper">
-                <PdfViewer pdfData={pdfUrl} />
+              <div className="markdown-viewer-container">
+                <div className="markdown-content">
+                  <ReactMarkdown>{reportText}</ReactMarkdown>
+                </div>
               </div>
             )}
 
             {!isEditing && (
               <div className="pdf-actions">
+                <button className="download-btn secondary" onClick={openPdfInNewTab}>
+                  <FiExternalLink /> View/Print PDF
+                </button>
                 <button className="download-btn" onClick={handleDownload}>
-                  ⬇️ Download PDF
+                  <FiDownload /> Download PDF
                 </button>
               </div>
             )}
           </>
         )}
 
-        { }
         {!isGenerating && !pdfUrl && (
           <div className="empty-state">
             <div className="empty-icon">📝</div>
