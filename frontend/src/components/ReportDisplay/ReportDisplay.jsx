@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import "./ReportDisplay.css";
-import PdfViewer from "./PdfViewer";
 
 export const ReportDisplay = ({
   topic,
@@ -65,24 +64,14 @@ export const ReportDisplay = ({
 
   const openPdfInNewTab = () => {
     if (pdfBlobUrl) {
-      // Small delay to ensure browser doesn't block it
-      const newTab = window.open();
-      if (newTab) {
-        newTab.document.title = (topic || "Report") + " - PDF Preview";
-        // Create an iframe to show the PDF and maintain the title
-        const iframe = newTab.document.createElement('iframe');
-        iframe.src = pdfBlobUrl;
-        iframe.style.width = '100vw';
-        iframe.style.height = '100vh';
-        iframe.style.border = 'none';
-        iframe.style.position = 'fixed';
-        iframe.style.top = '0';
-        iframe.style.left = '0';
-        newTab.document.body.style.margin = '0';
-        newTab.document.body.appendChild(iframe);
+      // Use a more reliable way to open the PDF in a new tab
+      // Some browsers block dynamic tab manipulation, so we'll use a simple window.open
+      // but try to set the title via a temporary HTML blob if possible, or just open directly
+      const win = window.open(pdfBlobUrl, "_blank");
+      if (win) {
+        win.focus();
       } else {
-        // Fallback for popup blockers
-        window.open(pdfBlobUrl, "_blank");
+        alert("Please allow popups to view the PDF in a new tab.");
       }
     }
   };
@@ -278,13 +267,15 @@ export const ReportDisplay = ({
                 </div>
               </div>
             ) : (
-              <div className="pdf-full-preview">
-                <div className="pdf-viewer-container-embedded">
-                  <PdfViewer pdfData={pdfUrl} />
+              <div className="pdf-placeholder">
+                <div className="pdf-icon">📄</div>
+                <div className="pdf-info">
+                  <h4>Report Ready</h4>
+                  <p>Your document has been generated and is ready for viewing.</p>
                 </div>
-                <div className="pdf-view-actions-bar">
+                <div className="pdf-view-actions">
                   <button className="view-new-tab-btn" onClick={openPdfInNewTab}>
-                    👁️ Open in New Tab
+                    👁️ View PDF in New Tab
                   </button>
                   <button className="download-btn" onClick={handleDownload}>
                     ⬇️ Download PDF
@@ -305,6 +296,6 @@ export const ReportDisplay = ({
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 };
