@@ -138,32 +138,42 @@ export const ReportDisplay = ({
 
   const handleTextSelection = (e) => {
     const el = e.target;
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const selectedText = (el.value.substring(start, end) || "").trim();
+    // Delay selection check slightly to allow the browser to finalize selection state
+    // but keep it fast enough to feel immediate.
+    setTimeout(() => {
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const selectedText = (el.value.substring(start, end) || "").trim();
 
-    if (selectedText.length >= 2) {
-      // For mobile, we might not get clientX/Y from onSelect, so we use a fallback
-      let x = e.clientX;
-      let y = e.clientY;
+      if (selectedText.length >= 2) {
+        setSelection(prev => {
+          let x = e.clientX;
+          let y = e.clientY;
 
-      // Handle touch events
-      if (e.changedTouches && e.changedTouches[0]) {
-        x = e.changedTouches[0].clientX;
-        y = e.changedTouches[0].clientY;
+          // If touch event, extract coordinates
+          if (e.changedTouches && e.changedTouches[0]) {
+            x = e.changedTouches[0].clientX;
+            y = e.changedTouches[0].clientY;
+          }
+
+          // Important: If coordinates are missing (e.g. keyboard onSelect), 
+          // use previous ones or a fallback instead of resetting to 0.
+          const newX = x || prev.x || (window.innerWidth / 2);
+          const newY = y || prev.y || (window.innerHeight / 2);
+
+          return {
+            start,
+            end,
+            text: selectedText,
+            visible: true,
+            x: newX,
+            y: newY
+          };
+        });
+      } else {
+        setSelection(prev => ({ ...prev, visible: false }));
       }
-
-      setSelection({
-        start,
-        end,
-        text: selectedText,
-        visible: true,
-        x: x || 0,
-        y: y || 0
-      });
-    } else {
-      setSelection(prev => ({ ...prev, visible: false }));
-    }
+    }, 0);
   };
 
 
