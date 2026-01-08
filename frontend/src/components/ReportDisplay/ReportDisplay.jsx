@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import "./ReportDisplay.css";
+import PdfViewer from "./PdfViewer";
 
 export const ReportDisplay = ({
   topic,
@@ -29,25 +30,28 @@ export const ReportDisplay = ({
 
 
   useEffect(() => {
-    if (pdfUrl && !pdfUrl.startsWith("data:application/pdf")) {
-      preventAutoScroll();
-      try {
+    if (pdfUrl) {
+      // If it's a data URI, convert to blob to avoid long URLs and browser restrictions
+      if (pdfUrl.startsWith("data:application/pdf")) {
+        try {
+          const base64Data = pdfUrl.replace(/^data:application\/pdf;base64,/, "");
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = Array.from(byteCharacters, (c) => c.charCodeAt(0));
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: "application/pdf" });
+          const blobUrl = URL.createObjectURL(blob);
+          setPdfBlobUrl(blobUrl);
 
-        const base64Data = pdfUrl.replace(/^data:application\/pdf;base64,/, "");
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = Array.from(byteCharacters, (c) => c.charCodeAt(0));
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "application/pdf" });
-        const blobUrl = URL.createObjectURL(blob);
-        setPdfBlobUrl(blobUrl);
-
-      } catch (err) {
-        console.error("Error converting PDF base64:", err);
-        setPdfBlobUrl("");
+          // Cleanup old blob URL
+          return () => URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+          console.error("Error converting PDF base64:", err);
+          setPdfBlobUrl(pdfUrl);
+        }
+      } else {
+        // If it's already a regular URL or blob URL, use it directly
+        setPdfBlobUrl(pdfUrl);
       }
-    } else {
-
-      setPdfBlobUrl(pdfUrl);
     }
   }, [pdfUrl]);
 
@@ -61,7 +65,25 @@ export const ReportDisplay = ({
 
   const openPdfInNewTab = () => {
     if (pdfBlobUrl) {
-      window.open(pdfBlobUrl, "_blank");
+      // Small delay to ensure browser doesn't block it
+      const newTab = window.open();
+      if (newTab) {
+        newTab.document.title = (topic || "Report") + " - PDF Preview";
+        // Create an iframe to show the PDF and maintain the title
+        const iframe = newTab.document.createElement('iframe');
+        iframe.src = pdfBlobUrl;
+        iframe.style.width = '100vw';
+        iframe.style.height = '100vh';
+        iframe.style.border = 'none';
+        iframe.style.position = 'fixed';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        newTab.document.body.style.margin = '0';
+        newTab.document.body.appendChild(iframe);
+      } else {
+        // Fallback for popup blockers
+        window.open(pdfBlobUrl, "_blank");
+      }
     }
   };
 
@@ -256,15 +278,13 @@ export const ReportDisplay = ({
                 </div>
               </div>
             ) : (
-              <div className="pdf-placeholder">
-                <div className="pdf-icon">📄</div>
-                <div className="pdf-info">
-                  <h4>Report Ready</h4>
-                  <p>Your document has been generated and is ready for viewing.</p>
+              <div className="pdf-full-preview">
+                <div className="pdf-viewer-container-embedded">
+                  <PdfViewer pdfData={pdfUrl} />
                 </div>
-                <div className="pdf-view-actions">
+                <div className="pdf-view-actions-bar">
                   <button className="view-new-tab-btn" onClick={openPdfInNewTab}>
-                    👁️ View PDF in New Tab
+                    👁️ Open in New Tab
                   </button>
                   <button className="download-btn" onClick={handleDownload}>
                     ⬇️ Download PDF
