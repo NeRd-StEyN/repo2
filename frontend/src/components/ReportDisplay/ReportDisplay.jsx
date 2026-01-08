@@ -143,18 +143,14 @@ export const ReportDisplay = ({
     const selectedText = (el.value.substring(start, end) || "").trim();
 
     if (selectedText.length >= 2) {
-      // Calculate cursor position for laptop floating button
-      // textarea selection doesn't give us coordinates, so we'll use a hidden div or simple cursor-based logic
-      // But for better laptop experience, we can use the selection API or just the mouse coordinates from the event
+      // For mobile, we might not get clientX/Y from onSelect, so we use a fallback
+      let x = e.clientX;
+      let y = e.clientY;
 
-      let x = e.clientX || 0;
-      let y = e.clientY || 0;
-
-      // If it's a keyboard event, we might not have clientX/Y, so we fallback to previous or center
-      if (e.type === 'keyup' && selection.visible) {
-        // Keep existing pos for keyup
-        x = selection.x;
-        y = selection.y;
+      // Handle touch events
+      if (e.changedTouches && e.changedTouches[0]) {
+        x = e.changedTouches[0].clientX;
+        y = e.changedTouches[0].clientY;
       }
 
       setSelection({
@@ -162,16 +158,11 @@ export const ReportDisplay = ({
         end,
         text: selectedText,
         visible: true,
-        x,
-        y
+        x: x || 0,
+        y: y || 0
       });
     } else {
-      // Small timeout to allow clicking the button before it disappears
-      setTimeout(() => {
-        // Check if the focus is still the rewrite button to avoid flickering
-        if (document.activeElement && document.activeElement.className === 'floating-rewrite-btn') return;
-        setSelection(prev => ({ ...prev, visible: false }));
-      }, 150);
+      setSelection(prev => ({ ...prev, visible: false }));
     }
   };
 
@@ -261,21 +252,20 @@ export const ReportDisplay = ({
                   onMouseUp={handleTextSelection}
                   onKeyUp={handleTextSelection}
                   onSelect={handleTextSelection}
+                  onTouchEnd={handleTextSelection}
                   placeholder="Edit report content here..."
                   spellCheck="false"
                 />
 
-                {selection.visible && !isMobile && (
+                {selection.visible && (
                   <button
-                    className="floating-rewrite-btn"
-                    style={{
+                    className={`floating-rewrite-btn ${isMobile ? 'mobile-fixed' : ''}`}
+                    style={!isMobile ? {
                       position: 'fixed',
                       left: `${selection.x}px`,
-                      top: `${selection.y - 40}px`, // Adjusted offset
-                      zIndex: 1000,
-                      transform: 'translateX(-50%)' // Center it horizontally relative to click
-                    }}
-                    onMouseDown={(e) => e.preventDefault()} // Prevent textarea losing focus/selection
+                      top: `${selection.y - 45}px`,
+                      zIndex: 1000
+                    } : {}}
                     onClick={handleRewrite}
                     disabled={isRewriting}
                   >
@@ -284,15 +274,6 @@ export const ReportDisplay = ({
                 )}
 
                 <div className="editor-actions">
-                  {selection.visible && isMobile && (
-                    <button
-                      className="mobile-rewrite-btn"
-                      onClick={handleRewrite}
-                      disabled={isRewriting}
-                    >
-                      {isRewriting ? "✨ Rewriting..." : "✨ AI Rewrite Selection"}
-                    </button>
-                  )}
                   {saveError && <span className="save-error">{saveError}</span>}
                   <button
                     className="save-btn"
