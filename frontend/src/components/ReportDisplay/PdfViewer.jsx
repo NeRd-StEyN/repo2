@@ -111,9 +111,11 @@ const PdfViewer = ({ pdfData }) => {
             gap: '1.2rem',
             padding: '1rem',
             background: '#111',
-            height: '100%',
+            flex: 1,
             width: '100%',
             overflowY: 'auto',
+            overflowX: 'hidden',
+            minHeight: 0,
             scrollbarWidth: 'thin',
             scrollbarColor: '#444 transparent'
         }}>
