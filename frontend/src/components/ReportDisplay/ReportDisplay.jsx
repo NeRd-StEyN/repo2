@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import "./ReportDisplay.css";
-import ReactMarkdown from 'react-markdown';
-import { FiExternalLink, FiDownload, FiEdit3, FiEye } from 'react-icons/fi';
 
 export const ReportDisplay = ({
   topic,
@@ -59,27 +57,6 @@ export const ReportDisplay = ({
       setEditedText(reportText);
     }
   }, [reportText]);
-
-
-  const handleIframeLoad = (e) => {
-    try {
-      const iframe = e.target;
-      iframe.blur();
-      preventAutoScroll();
-      if (iframe.contentWindow) {
-        iframe.contentWindow.postMessage(
-          {
-            type: "pdf-viewer-command",
-            command: "zoom",
-            value: "100",
-          },
-          "*"
-        );
-      }
-    } catch (err) {
-      console.log("PDF viewer settings not accessible:", err);
-    }
-  };
 
 
   const openPdfInNewTab = () => {
@@ -217,27 +194,17 @@ export const ReportDisplay = ({
       <div className="report-header">
         <h3>Preview Report</h3>
         {!isGenerating && pdfUrl && (
-          <div className="header-actions">
-            <button
-              className="open-tab-btn"
-              onClick={openPdfInNewTab}
-              title="Open PDF in new tab"
-            >
-              <FiExternalLink /> Full PDF
-            </button>
-            <button
-              className={`edit-toggle-btn ${isEditing ? 'active' : ''}`}
-              onClick={() => setIsEditing(!isEditing)}
-              disabled={isSaving}
-            >
-              {isEditing ? <><FiEye /> View</> : <><FiEdit3 /> Edit</>}
-            </button>
-          </div>
+          <button
+            className={`edit-toggle-btn ${isEditing ? 'active' : ''}`}
+            onClick={() => setIsEditing(!isEditing)}
+            disabled={isSaving}
+          >
+            {isEditing ? "👁️ View PDF" : "✏️ Edit Text"}
+          </button>
         )}
       </div>
 
       <div className="report-content">
-        { }
         {isGenerating && (
           <div className="generating-placeholder">
             <div className="loading-spinner"></div>
@@ -246,8 +213,7 @@ export const ReportDisplay = ({
           </div>
         )}
 
-        { }
-        {!isGenerating && pdfBlobUrl && (
+        {!isGenerating && pdfUrl && (
           <>
             {isEditing ? (
               <div className="report-editor-container">
@@ -290,21 +256,20 @@ export const ReportDisplay = ({
                 </div>
               </div>
             ) : (
-              <div className="markdown-viewer-container">
-                <div className="markdown-content">
-                  <ReactMarkdown>{reportText}</ReactMarkdown>
+              <div className="pdf-placeholder">
+                <div className="pdf-icon">📄</div>
+                <div className="pdf-info">
+                  <h4>Report Ready</h4>
+                  <p>Your document has been generated and is ready for viewing.</p>
                 </div>
-              </div>
-            )}
-
-            {!isEditing && (
-              <div className="pdf-actions">
-                <button className="download-btn secondary" onClick={openPdfInNewTab}>
-                  <FiExternalLink /> View/Print PDF
-                </button>
-                <button className="download-btn" onClick={handleDownload}>
-                  <FiDownload /> Download PDF
-                </button>
+                <div className="pdf-view-actions">
+                  <button className="view-new-tab-btn" onClick={openPdfInNewTab}>
+                    👁️ View PDF in New Tab
+                  </button>
+                  <button className="download-btn" onClick={handleDownload}>
+                    ⬇️ Download PDF
+                  </button>
+                </div>
               </div>
             )}
           </>
