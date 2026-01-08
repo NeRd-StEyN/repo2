@@ -298,6 +298,24 @@
     }
 }
 
+.mobile-rewrite-btn {
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3);
+    transition: all 0.2s;
+    animation: fadeInRewriter 0.3s ease-out;
+}
+
+.mobile-rewrite-btn:active {
+    transform: scale(0.95);
+}
+
 .generating-placeholder {
     display: flex;
     flex-direction: column;

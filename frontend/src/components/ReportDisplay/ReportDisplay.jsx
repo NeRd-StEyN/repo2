@@ -143,17 +143,21 @@ export const ReportDisplay = ({
     const selectedText = (el.value.substring(start, end) || "").trim();
 
     if (selectedText.length >= 2) {
-      // Basic positioning logic for the rewrite button
-      // We'll use more robust positioning in CSS and JS later if needed
+      // Get positioning from event if available, otherwise 0
+      const x = e.clientX || 0;
+      const y = e.clientY || 0;
+
       setSelection({
         start,
         end,
         text: selectedText,
         visible: true,
-        x: e.clientX || 0,
-        y: e.clientY || 0
+        x,
+        y
       });
     } else {
+      // If we're clicking away, hide but don't clear if it was an interaction with the button
+      // Actually, standard behavior is to hide
       setSelection(prev => ({ ...prev, visible: false }));
     }
   };
@@ -243,11 +247,12 @@ export const ReportDisplay = ({
                   onChange={(e) => setEditedText(e.target.value)}
                   onMouseUp={handleTextSelection}
                   onKeyUp={handleTextSelection}
+                  onSelect={handleTextSelection}
                   placeholder="Edit report content here..."
                   spellCheck="false"
                 />
 
-                {selection.visible && (
+                {selection.visible && !isMobile && selection.y > 0 && (
                   <button
                     className="floating-rewrite-btn"
                     style={{
@@ -264,6 +269,15 @@ export const ReportDisplay = ({
                 )}
 
                 <div className="editor-actions">
+                  {selection.visible && isMobile && (
+                    <button
+                      className="mobile-rewrite-btn"
+                      onClick={handleRewrite}
+                      disabled={isRewriting}
+                    >
+                      {isRewriting ? "✨ Rewriting..." : "✨ AI Rewrite Selection"}
+                    </button>
+                  )}
                   {saveError && <span className="save-error">{saveError}</span>}
                   <button
                     className="save-btn"
