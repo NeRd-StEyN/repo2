@@ -143,9 +143,19 @@ export const ReportDisplay = ({
     const selectedText = (el.value.substring(start, end) || "").trim();
 
     if (selectedText.length >= 2) {
-      // Get positioning from event if available, otherwise 0
-      const x = e.clientX || 0;
-      const y = e.clientY || 0;
+      // Calculate cursor position for laptop floating button
+      // textarea selection doesn't give us coordinates, so we'll use a hidden div or simple cursor-based logic
+      // But for better laptop experience, we can use the selection API or just the mouse coordinates from the event
+
+      let x = e.clientX || 0;
+      let y = e.clientY || 0;
+
+      // If it's a keyboard event, we might not have clientX/Y, so we fallback to previous or center
+      if (e.type === 'keyup' && selection.visible) {
+        // Keep existing pos for keyup
+        x = selection.x;
+        y = selection.y;
+      }
 
       setSelection({
         start,
@@ -156,9 +166,12 @@ export const ReportDisplay = ({
         y
       });
     } else {
-      // If we're clicking away, hide but don't clear if it was an interaction with the button
-      // Actually, standard behavior is to hide
-      setSelection(prev => ({ ...prev, visible: false }));
+      // Small timeout to allow clicking the button before it disappears
+      setTimeout(() => {
+        // Check if the focus is still the rewrite button to avoid flickering
+        if (document.activeElement && document.activeElement.className === 'floating-rewrite-btn') return;
+        setSelection(prev => ({ ...prev, visible: false }));
+      }, 150);
     }
   };
 
@@ -252,15 +265,17 @@ export const ReportDisplay = ({
                   spellCheck="false"
                 />
 
-                {selection.visible && !isMobile && selection.y > 0 && (
+                {selection.visible && !isMobile && (
                   <button
                     className="floating-rewrite-btn"
                     style={{
                       position: 'fixed',
                       left: `${selection.x}px`,
-                      top: `${selection.y - 45}px`,
-                      zIndex: 1000
+                      top: `${selection.y - 40}px`, // Adjusted offset
+                      zIndex: 1000,
+                      transform: 'translateX(-50%)' // Center it horizontally relative to click
                     }}
+                    onMouseDown={(e) => e.preventDefault()} // Prevent textarea losing focus/selection
                     onClick={handleRewrite}
                     disabled={isRewriting}
                   >
