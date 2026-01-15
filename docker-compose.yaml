@@ -1,0 +1,9 @@
+services:
+  repoverse:
+    build: .
+    image: repoverse-app
+    ports:
+      - "7860:7860"
+    env_file:
+      - backend/.env
+    restart: unless-stopped
